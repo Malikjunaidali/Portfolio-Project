@@ -1,0 +1,87 @@
+select * from CovidDeaths;
+
+--select * from CovidVaccination
+select location,date,total_cases,new_cases,total_deaths,population from CovidDeaths
+order by 1,2;
+--it means sort the values according to location and date
+
+-- total cases Vs total deaths
+select location,date,total_cases,total_deaths , (total_deaths/total_cases)*100 as DeathPercentage from CovidDeaths
+--where location like '%pak%'
+order by 1,2;
+
+---Highest Covid cases in a countries
+
+select location,population ,date,total_deaths, max(total_Cases) as HighestCases, max((total_Cases/population))*100 as percentpopulationInfected
+from CovidDeaths
+group by location,population,date,total_deaths
+order by percentpopulationInfected desc
+
+--Highest Covid Death Cases 
+--- type casting varchar to int
+--- cleaning the data where continent is null such as World,europe,south america
+
+select location,Max(cast(total_deaths as int) ) as TotalDeathCases
+from CovidDeaths
+where continent is not null And location like '%Pak%'
+group by location
+order by TotalDeathCases desc
+
+select continent,Max(cast(total_deaths as int) ) as TotalDeathCases
+from CovidDeaths
+where continent is not null
+group by continent
+order by TotalDeathCases desc
+
+select sum(new_cases) as total_cases from CovidDeaths
+select date, sum(cast(new_deaths as int)) as total_deaths from CovidDeaths
+group by date
+order by date;
+--Total Population vs Total Vacinated Persons
+Select Cd.continent,Cd.location,Cd.date,Cd.population,CV.new_vaccinations,Sum(convert( int,new_vaccinations))
+over (partition by Cd.location order by Cd.location) as RollingPeopleVacinated from CovidDeaths Cd
+join CovidVaccination CV on Cd.location=Cv.location And Cd.date = CV.date;
+
+--Calculating Population Vs Vaccinated Peoples Using CTE's
+With popVsVac(continent,location,population,new_vaccinations,rollingpeoplevacinated)
+as
+(
+Select Cd.continent,Cd.location,Cd.population,CV.new_vaccinations,Sum(convert( int,new_vaccinations))
+over (partition by Cd.location order by Cd.location) as RollingPeopleVacinated from CovidDeaths Cd
+join CovidVaccination CV on Cd.location=Cv.location And Cd.date = CV.date
+where Cd.continent is not null
+
+)
+select *,(rollingpeoplevacinated/population)*100 as TotalvacinationPercentage from popVsVac;
+
+-- Creating temporary table
+
+drop table if exists #PercentPopulationVaccinated
+Create table #PercentPopulationVaccinated
+(
+continent nvarchar(255),
+Location nvarchar(255),
+date datetime,
+population numeric,
+new_vaccinations numeric,
+rollingpeoplevacinated numeric
+)
+
+insert into #PercentPopulationVaccinated
+Select Cd.continent,Cd.location,cd.date,Cd.population,CV.new_vaccinations,Sum(convert( int,new_vaccinations))
+over (partition by Cd.location order by Cd.location) as rollingpeoplevacinated from CovidDeaths Cd
+join CovidVaccination CV on Cd.location=Cv.location And Cd.date = CV.date
+where Cd.continent is not null
+
+select *,(rollingpeoplevacinated/population)*100 as TotalvacinationPercentage from #PercentPopulationVaccinated;
+
+
+---Now creating Views for later useage
+Create view PercentPopulationVaccinated as
+Select Cd.continent,Cd.location,cd.date,Cd.population,CV.new_vaccinations,Sum(convert( int,new_vaccinations))
+over (partition by Cd.location order by Cd.location) as rollingpeoplevacinated from CovidDeaths Cd
+join CovidVaccination CV on Cd.location=Cv.location And Cd.date = CV.date
+where Cd.continent is not null
+
+select * from PercentPopulationVaccinated;
+
