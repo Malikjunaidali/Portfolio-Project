@@ -3,8 +3,8 @@ select * from CovidDeaths;
 --select * from CovidVaccination
 select location,date,total_cases,new_cases,total_deaths,population from CovidDeaths
 order by 1,2;
---it means sort the values according to location and date
 
+--it means sort the values according to location and date
 -- total cases Vs total deaths
 select location,date,total_cases,total_deaths , (total_deaths/total_cases)*100 as DeathPercentage from CovidDeaths
 --where location like '%pak%'
